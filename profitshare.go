@@ -4,6 +4,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha1"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -25,6 +26,14 @@ type Paginator struct {
 	ItemsPerPage int `json:"itemsPerPage"`
 	CurrentPage  int `json:"currentPage"`
 	TotalPages   int `json:"totalPages"`
+}
+
+// APIError holds API error information
+type APIError struct {
+	Error struct {
+		Code    string `json:"code"`
+		Message string `json:"message"`
+	} `json:"error"`
 }
 
 // Creates a new Instance of ProfitShare API
@@ -50,7 +59,7 @@ func (ps *ProfitShare) request(method, uri string, postValues *url.Values) []byt
 	url, err := url.Parse(uri)
 
 	if err != nil {
-		fmt.Errorf("Error setting-up request: %s", err.Error())
+		panic(fmt.Errorf("Error setting-up request: %s", err.Error()))
 	}
 
 	req, err := http.NewRequest(method, apiDomain+url.String(), nil)
@@ -63,7 +72,7 @@ func (ps *ProfitShare) request(method, uri string, postValues *url.Values) []byt
 	key, date := ps.createAuth(method, url.Path, url.RawQuery)
 
 	if err != nil {
-		fmt.Errorf("Error setting-up request: %s", err.Error())
+		panic(fmt.Errorf("Error setting-up request: %s", err.Error()))
 	}
 
 	req.Header.Add("User-Agent", "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1)")
@@ -75,13 +84,20 @@ func (ps *ProfitShare) request(method, uri string, postValues *url.Values) []byt
 	resp, err := client.Do(req)
 
 	if err != nil {
-		fmt.Errorf("Error setting-up request: %s", err.Error())
+		panic(fmt.Errorf("Error setting-up request: %s", err.Error()))
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
 
 	if err != nil {
-		fmt.Errorf("Error setting-up request: %s", err.Error())
+		panic(fmt.Errorf("Error setting-up request: %s", err.Error()))
+	}
+
+	if strings.Contains(string(body), "error") {
+		rez := APIError{}
+		_ = json.Unmarshal(body, &rez)
+
+		panic(fmt.Errorf("API Error: %s (%s)", rez.Error.Message, rez.Error.Code))
 	}
 
 	return body
