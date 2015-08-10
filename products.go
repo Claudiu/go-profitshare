@@ -55,8 +55,9 @@ func (ps *ProfitShare) GetProductPage(advertiserID []int, page int) ([]Product, 
 
 	url.RawQuery = q.Encode()
 
+	fmt.Println(url.String() + "&" + "filters[advertiser]=" + strings.Join(str, ","))
 	// Workaround: [ Encoding
-	body, err := ps.Get(url.String() + "filters[advertisers]=" + strings.Join(str, ","))
+	body, err := ps.Get(url.String() + "&" + "filters[advertiser]=" + strings.Join(str, ","))
 
 	if err != nil {
 		return []Product{}, Paginator{}, err

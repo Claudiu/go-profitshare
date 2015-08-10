@@ -5,6 +5,7 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -44,7 +45,7 @@ func (ps *ProfitShare) createAuth(verb, method, query string) (string, string) {
 	date := time.Now().Format("Mon, 02 Jan 2006 15:04:05 -0700")
 
 	signature := verb + method + "?" + query + "/" + ps.user + date
-	//fmt.Println(signature)
+	fmt.Println(signature)
 	mac := hmac.New(sha1.New, []byte(ps.key))
 	mac.Write([]byte(signature))
 	key := hex.EncodeToString(mac.Sum(nil))
