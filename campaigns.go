@@ -33,34 +33,51 @@ type CampaignsResult struct {
 }
 
 // GetCampaignPage returns all the campaigns from the supplied page
-func (ps *ProfitShare) GetCampaignPage(page int) ([]Campaign, Paginator) {
+func (ps *ProfitShare) GetCampaignPage(page int) ([]Campaign, Paginator, error) {
 	url, err := url.Parse("affiliate-campaigns")
 
 	if err != nil {
-		fmt.Println(err)
+		return []Campaign{}, Paginator{}, err
 	}
 
 	q := url.Query()
 	q.Add("page", fmt.Sprintf("%d", page))
 	url.RawQuery = q.Encode()
 
-	body := ps.Get(url.String())
+	body, err := ps.Get(url.String())
+
+	if err != nil {
+		return []Campaign{}, Paginator{}, err
+	}
 
 	rez := map[string]CampaignsResult{}
-	_ = json.Unmarshal(body, &rez)
+	err = json.Unmarshal(body, &rez)
 
-	return rez["result"].Campaigns, rez["result"].Paginator
+	if err != nil {
+		return []Campaign{}, Paginator{}, err
+	}
+
+	return rez["result"].Campaigns, rez["result"].Paginator, nil
 }
 
 // GetCampaigns returns all the active campaigns
-func (ps *ProfitShare) GetCampaigns() []Campaign {
-	campaigns, pag := ps.GetCampaignPage(1)
+func (ps *ProfitShare) GetCampaigns() ([]Campaign, error) {
+	campaigns, pag, err := ps.GetCampaignPage(1)
+
+	if err != nil {
+		return []Campaign{}, err
+	}
 
 	for index := 2; index <= pag.TotalPages; index++ {
-		currentCampaign, _ := ps.GetCampaignPage(index)
+		currentCampaign, _, err := ps.GetCampaignPage(index)
+
+		if err != nil {
+			return []Campaign{}, err
+		}
+
 		campaigns = append(campaigns, currentCampaign...)
 		time.Sleep(ps.SleepTime)
 	}
 
-	return campaigns
+	return campaigns, nil
 }

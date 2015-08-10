@@ -5,7 +5,6 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -53,13 +52,13 @@ func (ps *ProfitShare) createAuth(verb, method, query string) (string, string) {
 	return key, date
 }
 
-func (ps *ProfitShare) request(method, uri string, postValues *url.Values) []byte {
+func (ps *ProfitShare) request(method, uri string, postValues *url.Values) ([]byte, error) {
 	client := &http.Client{}
 
 	url, err := url.Parse(uri)
 
 	if err != nil {
-		panic(fmt.Errorf("Error setting-up request: %s", err.Error()))
+		return []byte{}, err
 	}
 
 	req, err := http.NewRequest(method, apiDomain+url.String(), nil)
@@ -72,7 +71,7 @@ func (ps *ProfitShare) request(method, uri string, postValues *url.Values) []byt
 	key, date := ps.createAuth(method, url.Path, url.RawQuery)
 
 	if err != nil {
-		panic(fmt.Errorf("Error setting-up request: %s", err.Error()))
+		return []byte{}, err
 	}
 
 	req.Header.Add("User-Agent", "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1)")
@@ -84,25 +83,25 @@ func (ps *ProfitShare) request(method, uri string, postValues *url.Values) []byt
 	resp, err := client.Do(req)
 
 	if err != nil {
-		panic(fmt.Errorf("Error setting-up request: %s", err.Error()))
+		return []byte{}, err
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
 
 	if err != nil {
-		panic(fmt.Errorf("Error setting-up request: %s", err.Error()))
+		return []byte{}, err
 	}
 
 	if strings.Contains(string(body), "error") {
 		rez := APIError{}
 		_ = json.Unmarshal(body, &rez)
 
-		panic(fmt.Errorf("API Error: %s (%s)", rez.Error.Message, rez.Error.Code))
+		return []byte{}, err
 	}
 
-	return body
+	return body, nil
 }
 
-func (ps *ProfitShare) Get(uri string) []byte {
+func (ps *ProfitShare) Get(uri string) ([]byte, error) {
 	return ps.request("GET", uri, nil)
 }

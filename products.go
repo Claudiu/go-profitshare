@@ -38,11 +38,11 @@ type ProductsResult struct {
 }
 
 // GetProductPage returns a list of products and the paginator for a certain page
-func (ps *ProfitShare) GetProductPage(advertiserID []int, page int) ([]Product, Paginator) {
+func (ps *ProfitShare) GetProductPage(advertiserID []int, page int) ([]Product, Paginator, error) {
 	url, err := url.Parse("affiliate-products")
 
 	if err != nil {
-		fmt.Println(err)
+		return []Product{}, Paginator{}, err
 	}
 
 	str := make([]string, len(advertiserID))
@@ -56,27 +56,44 @@ func (ps *ProfitShare) GetProductPage(advertiserID []int, page int) ([]Product, 
 	url.RawQuery = q.Encode()
 
 	// Workaround: [ Encoding
-	body := ps.Get(url.String() + "filters[advertisers]=" + strings.Join(str, ","))
+	body, err := ps.Get(url.String() + "filters[advertisers]=" + strings.Join(str, ","))
+
+	if err != nil {
+		return []Product{}, Paginator{}, err
+	}
 
 	rez := ProductsResult{}
-	_ = json.Unmarshal(body, &rez)
+	err = json.Unmarshal(body, &rez)
+
+	if err != nil {
+		return []Product{}, Paginator{}, err
+	}
 
 	return rez.Result.Products, Paginator{
 		ItemsPerPage: rez.Result.RecordsPerPage,
 		CurrentPage:  rez.Result.CurrentPage,
 		TotalPages:   rez.Result.TotalPages,
-	}
+	}, nil
 }
 
 // GetProducts returns a list of all the products by advertiserIds
-func (ps *ProfitShare) GetProducts(advertiserID []int) []Product {
-	products, pag := ps.GetProductPage(advertiserID, 1)
+func (ps *ProfitShare) GetProducts(advertiserID []int) ([]Product, error) {
+	products, pag, err := ps.GetProductPage(advertiserID, 1)
+
+	if err != nil {
+		return []Product{}, err
+	}
 
 	for index := 2; index <= pag.TotalPages; index++ {
-		currentProduct, _ := ps.GetProductPage(advertiserID, index)
+		currentProduct, _, err := ps.GetProductPage(advertiserID, index)
+
+		if err != nil {
+			return []Product{}, err
+		}
+
 		products = append(products, currentProduct...)
 		time.Sleep(ps.SleepTime)
 	}
 
-	return products
+	return products, nil
 }

@@ -2,7 +2,6 @@ package profitshare
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/url"
 	"time"
 )
@@ -25,13 +24,13 @@ type Advertiser struct {
 }
 
 // GetAdvertisers returns a list of advertise from a period of time to another
-func (ps *ProfitShare) GetAdvertisers(from time.Time, to time.Time) []Advertiser {
+func (ps *ProfitShare) GetAdvertisers(from time.Time, to time.Time) ([]Advertiser, error) {
 	dateFormat := "2006-01-02"
 
 	url, err := url.Parse("affiliate-advertisers")
 
 	if err != nil {
-		fmt.Println(err)
+		return []Advertiser{}, err
 	}
 
 	q := url.Query()
@@ -39,7 +38,11 @@ func (ps *ProfitShare) GetAdvertisers(from time.Time, to time.Time) []Advertiser
 	q.Add("date_to", to.Format(dateFormat))
 	url.RawQuery = q.Encode()
 
-	body := ps.Get(url.String())
+	body, err := ps.Get(url.String())
+
+	if err != nil {
+		return []Advertiser{}, err
+	}
 
 	var rez map[string]map[string]Advertiser
 	_ = json.Unmarshal(body, &rez)
@@ -49,17 +52,17 @@ func (ps *ProfitShare) GetAdvertisers(from time.Time, to time.Time) []Advertiser
 		ret = append(ret, item)
 	}
 
-	return ret
+	return ret, nil
 }
 
 // GetAdvertisers1M returns a list of advertisers from a month ago to now
-func (ps *ProfitShare) GetAdvertisers1M() []Advertiser {
+func (ps *ProfitShare) GetAdvertisers1M() ([]Advertiser, error) {
 	now := time.Now()
 	return ps.GetAdvertisers(now.AddDate(0, -1, 0), now)
 }
 
 // GetAdvertisers1D returns a list of advertisers from a day ago to now
-func (ps *ProfitShare) GetAdvertisers1D() []Advertiser {
+func (ps *ProfitShare) GetAdvertisers1D() ([]Advertiser, error) {
 	now := time.Now()
 	return ps.GetAdvertisers(now.AddDate(0, 0, -1), now)
 }

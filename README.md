@@ -10,20 +10,24 @@ Currently Implemented:
 Grabbing the list of advertisers
 --------------------------------
     package main
-    
+
     import (
     	"fmt"
     	"github.com/claudiu/go-profitshare"
     )
-    
+
     func main() {
     	ps := profitshare.NewProfitShare(
-    		"claudiu",                          // User
-    		"dqwdwqdd1r32r2332f23f3f23f32fsad", // API Key
+    		"api user",
+    		"api key",
     	)
-    
-    	advertisers := ps.GetAdvertisers1M()
-    
+
+    	advertisers, err := ps.GetAdvertisers1M()
+
+      if err != nil {
+        panic(err)
+      }
+
     	for _, advertiser := range advertisers {
     		fmt.Println(advertiser.ID)
     	}
